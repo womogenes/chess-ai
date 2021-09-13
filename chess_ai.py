@@ -1,7 +1,10 @@
 import chess
+import chess.pgn
 import random
 from functools import lru_cache
 import time
+import sys
+import os
 from tables import PAWNOPENINGTABLE, KNIGHTTABLE, BISHOPTABLE, ROOKTABLE, QUEENTABLE, KINGMIDDLETABLE
 
 value = {
@@ -22,7 +25,22 @@ tables = {
     chess.KING: KINGMIDDLETABLE
 }
 
-DEPTH = 3
+# Config
+DEPTH = 2
+PRINT_STDOUT = True
+
+# Definitely hacky
+
+i = 0
+while os.path.exists(f"./logs/game_{str(i).zfill(3)}.txt"):
+    i += 1
+fout = open(f"./logs/game_{str(i).zfill(3)}.txt", "w")
+
+
+def write(s=""):
+    if PRINT_STDOUT:
+        print(s)
+    print(s, file=fout)
 
 
 def flip(x):
@@ -48,13 +66,13 @@ def evaluate(board):
     # Add some positioning
     for square, piece in board.piece_map().items():
         if piece.color:
-            #print(square, piece, tables[piece.piece_type][square])
+            # write(square, piece, tables[piece.piece_type][square])
             valuation += tables[piece.piece_type][square] * \
-                0.1 * 1
+                0.02 * 1
         else:
-            #print(flip(square), piece, tables[piece.piece_type][flip(square)])
+            # write(flip(square), piece, tables[piece.piece_type][flip(square)])
             valuation += tables[piece.piece_type][flip(
-                square)] * 0.1 * -1
+                square)] * 0.02 * -1
 
     return valuation
 
@@ -96,32 +114,54 @@ def minimax(board, depth):
             if move_value >= best_val:
                 best_val = move_value
                 best_move = move
-                # print(move_value)
+                # write(move_value)
 
         else:
             if move_value <= best_val:
                 best_val = move_value
                 best_move = move
-                # print(move_value)
+                # write(move_value)
 
     return best_move
 
 
 board = chess.Board()
 
+game = chess.pgn.Game()
+node = game
+
+print(f"DEPTH={DEPTH}")
 while True:
-    print(board)
+    write(board)
     mover = 'white' if board.turn else 'black'
-    print(
-        f"Turn: {mover} \t Evaluation: {evaluate(board)}")
-    if board.outcome():
-        print(board.outcome())
+    write(
+        f"Turn: {mover} \t\t\t Evaluation: {round(evaluate(board), 2)}")
+
+    outcome = board.outcome()
+    if outcome:
+        write()
+        write(str(outcome.termination)[len("Termination."):])
+        if outcome.winner != None:
+            write(f"{'White' if outcome.winner else 'Black'} wins.")
+
+        write()
+        write("PGN\n=====")
+        write(game)
         break
 
-    input()
-    start_time = time.time()
+    # input()
+    # start_time = time.time()
 
     move = minimax(board, DEPTH)
-    #print(f"Done in {time.time() - start_time} seconds.")
-    print(f"{board.san(move)} was played by {mover}")
+    node = node.add_variation(move)
+
+    # write(f"Done in {time.time() - start_time} seconds.")
+
+    san_move = board.san(move)
+    write()
+    if board.turn:
+        write(f"{board.fullmove_number}. {san_move}")
+    else:
+        write(f"{board.fullmove_number}. ... {san_move}")
+
     board.push(move)
