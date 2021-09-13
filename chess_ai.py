@@ -22,6 +22,8 @@ tables = {
     chess.KING: KINGMIDDLETABLE
 }
 
+DEPTH = 3
+
 
 def flip(x):
     """
@@ -118,7 +120,8 @@ while True:
 
     input()
     start_time = time.time()
-    move = minimax(board, 3)
+
+    move = minimax(board, DEPTH)
     #print(f"Done in {time.time() - start_time} seconds.")
     print(f"{board.san(move)} was played by {mover}")
     board.push(move)
